@@ -59,11 +59,11 @@ FUNCTION Sing-BeersOnTheWall {
         
         # THE MORE BOTTLES TAKEN DOWN, THE LONGER THE TIME BETWEEN THE VERSES
         Start-Sleep -Seconds $songTime  
-    
+    <#
         IF (($onTheWall %5 -eq 0) -and ( $onTheWall -ne 0)) {
             Clear-host
         }
-
+    #>
         $host.ui.RawUI.ForegroundColor = "white"
     } Until ($onTheWall -lt 1)
 
