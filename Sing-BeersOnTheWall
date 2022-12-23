@@ -1,0 +1,79 @@
+clear-host
+
+FUNCTION Sing-BeersOnTheWall {
+    Param (
+        [Parameter(
+            HelpMessage="How many bootles can you count on the wall (between 1 and 100 bottles )"
+        )]  
+        [ValidateRange(1,99)]
+        [int]$beers = 99,
+        
+        [Parameter(
+            HelpMessage="How fast can you sing af vers... to begin with (1 to 5 secounds)"
+        )]  
+        [ValidateRange(1,5)]
+        $seconds = 5
+    )
+    $startBoottles  = $beers
+    $onTheWall = $beers 
+    
+    $beerImage =[System.Char]::ConvertFromUtf32([System.convert]::toInt32("1F37A",16))
+
+    do {
+        ## THE LESS BOOTLES ON THE WALL, THE SLOWER THE SONG BECOMES.... NATURALLY...
+        $((($beerImage*$onTheWall) -split '(.{20})') | Where-Object {$_})
+
+        SWITCH ($onTheWall) {
+            {$onTheWall -gt ($beers/2)} {$songTime = $seconds; break}
+            {$onTheWall -gt ($beers/4)} {$songTime = $seconds+2; break}
+            {$onTheWall -gt ($beers/8)} {$songTime = $seconds+5; break}
+            {$onTheWall -gt ($beers/10)} {$songTime = $seconds+10; break}
+        }
+        if($onTheWall % 2 -eq 0 ) {
+            $host.ui.RawUI.ForegroundColor = "yellow"
+        }
+        $object     = "bottles"
+        $object2    = "bottles"
+
+        $i2 = $onTheWall-1
+
+
+        If ($onTheWall -eq 1) {
+            $object = "bottle"
+        } 
+
+        IF ($i2 -eq 1 ) {
+            $object2 = "bottle"
+        }
+        IF ($i2 -gt 0) {
+            $remaingBottles = $i2
+        } ELSE {    
+            $remaingBottles = "no more"
+        }      
+
+        $Song   = 
+        "$onTheWall $object of beer on the wall, $onTheWall $object of beer. `nTake one down and pass it arround, $remaingBottles $object2 of beer on the wall.`n`n"
+        write-host $Song
+        
+        $onTheWall--
+        
+        # THE MORE BOTTLES TAKEN DOWN, THE LONGER THE TIME BETWEEN THE VERSES
+        Start-Sleep -Seconds $songTime  
+    
+        IF (($onTheWall %5 -eq 0) -and ( $onTheWall -ne 0)) {
+            Clear-host
+        }
+
+        $host.ui.RawUI.ForegroundColor = "white"
+    } Until ($onTheWall -lt 1)
+
+    $Song   = 
+    "$remaingBottles $object2 of beer on the wall, $remaingBottles $object2 of beer. `nGo to the store and buy some more, $beers $object2 on the wall`n`n"
+    write-host $Song  -foregroundColor red
+    $((($beerImage*$beers) -split '(.{20})') | Where-Object {$_})
+
+    Write-host "`n"
+}
+
+
+
