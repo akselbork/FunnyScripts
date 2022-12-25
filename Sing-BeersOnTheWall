@@ -1,8 +1,98 @@
 clear-host
+<#
+.SYNOPSIS
+    99 beers on the wall.....
+.DESCRIPTION
+
+.PARAMETER Beer
+
+.PARAMETER SongSpeed
+
+.PARAMETER MoodLevel
+
+.EXAMPLE
+    Sing-BeersOnTheWall -beers 2 -moodLevel 5
+
+.NOTES
+    Author:     Aksel Bork
+    Version:    1.  2022-12-24 Created
+                2.  2022-12-25 Adding voice and soundlevel
+#>
+
+#region HelperFunction
+<# 
+    Author: Erik Plachta
+    Date: 11/09/2021
+    Purpose: Manage Windows Audio Volume Levels With PowerShella
+    Summary: Using PowerShell to create a COM Object of the type Windows Shell. Then running Windows Shell function function SendKeys() with the parameters `[char]173`, `[char]174`, or `[char]175`.
+#>
+
+<# % FUNCTION - START #>
+function set_AudioLevel {
+    <# Loop to adjust audio level based on volume
+        Order of Operations    
+            1. Create Windows Shell object
+            2. Divides $audio_Level by 50% because command uses 2% by default, but we are assuming 1%.        
+            3. Sets Volume Level to 0
+            4. Increments UP to Level based on provided INT $audio_Level
+
+        Example: ( Remember incrementing by 1% )
+            
+            #Sets volume to 60%
+            set_AudioLevel -Volume 60
+
+            #Sets volume to 80%
+            set_AudioLevel -Volume 80
+
+            #Sets volume to 100%
+            set_AudioLevel -Volume 100
+    #>
+    Param (
+        [ValidateRange(1,100)]
+        $volume
+    )
+
+    ## 1. Create Shell  Object
+    $wshShell = new-object -com wscript.shell;
+
+    ## 2. Sets Volume Level to 0
+    1..50 | % { # 50 time loop
+        ##Set Volume Level to ZERO ( 50 = MAX or 100% level )
+        $wshShell.SendKeys([char]174)
+    }
+    
+    ## 3. Make each level 1 %. by Default assumes 2%, want to be 1 so can do 0 - 100% level
+    $volume = $volume / 2
+    
+    ## 4. Increments UP to Level based on provided INT $audio_Level
+    1..$volume | % { ## Loop from 1 to volume level provide
+        ## Adjust volume level UP for by one for each level loop
+        $wshShell.SendKeys([char]175)
+    }
+}
+
+FUNCTIOn Add-Sound {
+    <#
+        ## ADD SOUND TO THE TEXT
+        https://www.scriptinglibrary.com/languages/powershell/powershell-text-to-speech/
+    #>
+    Param (
+        [string]$text,
+        [int]$rate
+    )
+    ## ADD SOUND TO THE TEXT
+    add-type -AssemblyName System.Speech
+    $speechSynthesizer = New-Object -TypeName System.speech.Synthesis.speechSynthesizer
+    $speechSynthesizer.Rate = $rate
+    $speechSynthesizer.Speak($text)
+}
+
+#endregion 
 
 FUNCTION Sing-BeersOnTheWall {
     Param (
         [Parameter(
+            Mandatory = $true,
             HelpMessage="How many bootles can you count on the wall (between 1 and 100 bottles )"
         )]  
         [ValidateRange(1,99)]
@@ -12,68 +102,106 @@ FUNCTION Sing-BeersOnTheWall {
             HelpMessage="How fast can you sing af vers... to begin with (1 to 5 secounds)"
         )]  
         [ValidateRange(1,5)]
-        $seconds = 5
+        [int]$songSpeed = 1,
+
+        [Parameter(
+            HelpMessage="How get a mood are you in when begining the song... (1-10)"
+        )]  
+        [ValidateRange(1,10)]
+        [int]$moodLevel
     )
-    $startBoottles  = $beers
-    $onTheWall = $beers 
-    
-    $beerImage =[System.Char]::ConvertFromUtf32([System.convert]::toInt32("1F37A",16))
 
-    do {
-        ## THE LESS BOOTLES ON THE WALL, THE SLOWER THE SONG BECOMES.... NATURALLY...
-        $((($beerImage*$onTheWall) -split '(.{20})') | Where-Object {$_})
+    BEGIN {
+        ## SET THE AUDIO LEVEL
+        # https://blog.erikplachta.com/using-powershell-to-mute-unmute-audio-in-windows-resolved-2c236c33ae1e
+        $loudnesslevel = ($moodLevel*2) + 10
+        set_AudioLevel -Volume $loudnesslevel
+        
+        $startBoottles  = $beers
+        $onTheWall = $beers 
+        
+        ## ADDING THE BEER EMOJIE
+        $beerImage =[System.Char]::ConvertFromUtf32([System.convert]::toInt32("1F37A",16))
 
-        SWITCH ($onTheWall) {
-            {$onTheWall -gt ($beers/2)} {$songTime = $seconds; break}
-            {$onTheWall -gt ($beers/4)} {$songTime = $seconds+2; break}
-            {$onTheWall -gt ($beers/8)} {$songTime = $seconds+5; break}
-            {$onTheWall -gt ($beers/10)} {$songTime = $seconds+10; break}
-        }
-        if($onTheWall % 2 -eq 0 ) {
-            $host.ui.RawUI.ForegroundColor = "yellow"
-        }
-        $object     = "bottles"
-        $object2    = "bottles"
+        Write-host "`n"
+    }
+    PROCESS {
+        do {
+            ## THE LESS BOOTLES ON THE WALL, THE SLOWER THE SONG BECOMES.... NATURALLY...
+            $((($beerImage*$onTheWall) -split '(.{20})') | Where-Object {$_})
+            Write-host "`n"
+            
+            SWITCH ($onTheWall) {
+                {$onTheWall -gt ($beers/2)} {$songTime = $songSpeed;$soundlevel = $loudnesslevel;  break}
+                {$onTheWall -gt ($beers/4)} {$songTime = $songSpeed-1;$soundlevel = $loudnesslevel + 10;  break}
+                {$onTheWall -gt ($beers/8)} {$songTime = $songSpeed-2;$soundlevel = $loudnesslevel + 20;  break}
+                {$onTheWall -gt ($beers/10)} {$songTime = $songSpeed-5;$soundlevel = $loudnesslevel + 40;  break}
+            }
 
-        $i2 = $onTheWall-1
+            ## FORMATE THE SONG, BASED ON BOTTLE NUMBERS
+            if($onTheWall % 2 -eq 0 ) {
+                $host.ui.RawUI.ForegroundColor = "yellow"
+            }
+            $object     = "bottles"
+            $object2    = "bottles"
 
+            $i2 = $onTheWall-1
 
-        If ($onTheWall -eq 1) {
-            $object = "bottle"
-        } 
+            If ($onTheWall -eq 1) {
+                $object = "bottle"
+            } 
 
-        IF ($i2 -eq 1 ) {
-            $object2 = "bottle"
-        }
-        IF ($i2 -gt 0) {
-            $remaingBottles = $i2
-        } ELSE {    
-            $remaingBottles = "no more"
-        }      
+            IF ($i2 -eq 1 ) {
+                $object2 = "bottle"
+            }
+            IF ($i2 -gt 0) {
+                $remaingBottles = $i2
+            } ELSE {    
+                $remaingBottles = "no more"
+            }      
+
+            ## WRITE THE VERSES
+            $Song   = 
+            "$onTheWall $object of beer on the wall, $onTheWall $object of beer. `nTake one down and pass it arround, $remaingBottles $object2 of beer on the wall.`n`n"
+            write-host $Song
+            
+            ## SET SOUNDLEVEL
+            #write-host $soundlevel -ForegroundColor Green
+            #Write-host $songTime -ForegroundColor red
+            set_AudioLevel -Volume $soundlevel
+
+            ## SING
+            Add-Sound -text $song -rate $songSpeed
+
+            $onTheWall--
+            
+            ## THE MORE BOTTLES TAKEN DOWN, THE LONGER THE TIME BETWEEN THE VERSES
+            Start-Sleep -Seconds 1 #$songTime  
+        
+            ## CLEAR THE SCREEN FOR BOTTLES
+            IF (($onTheWall %5 -eq 0) -and ( $onTheWall -ne 0)) {
+                Clear-host
+            }
+
+            $host.ui.RawUI.ForegroundColor = "white"
+        } Until ($onTheWall -lt 1)
+    }
+    END {
+        ## LAST VERS
+        
+        ## SET SOUNDLEVEL
+        $soundlevel = $soundlevel + 50
+        #write-host $soundlevel  -ForegroundColor Green
+        set_AudioLevel -Volume $soundlevel
 
         $Song   = 
-        "$onTheWall $object of beer on the wall, $onTheWall $object of beer. `nTake one down and pass it arround, $remaingBottles $object2 of beer on the wall.`n`n"
-        write-host $Song
-        
-        $onTheWall--
-        
-        # THE MORE BOTTLES TAKEN DOWN, THE LONGER THE TIME BETWEEN THE VERSES
-        Start-Sleep -Seconds $songTime  
-    <#
-        IF (($onTheWall %5 -eq 0) -and ( $onTheWall -ne 0)) {
-            Clear-host
-        }
-    #>
-        $host.ui.RawUI.ForegroundColor = "white"
-    } Until ($onTheWall -lt 1)
+        "$remaingBottles $object2 of beer on the wall, $remaingBottles $object2 of beer. `nGo to the store and buy some more, $beers $object2 on the wall`n`n"
+        write-host $Song  -foregroundColor red
+        $((($beerImage*$beers) -split '(.{20})') | Where-Object {$_})
 
-    $Song   = 
-    "$remaingBottles $object2 of beer on the wall, $remaingBottles $object2 of beer. `nGo to the store and buy some more, $beers $object2 on the wall`n`n"
-    write-host $Song  -foregroundColor red
-    $((($beerImage*$beers) -split '(.{20})') | Where-Object {$_})
+        ## SING
+        Add-Sound -text $Song -rate $($songTime -5)
 
-    Write-host "`n"
+        Write-host "`n"
+    }
 }
-
-
-
