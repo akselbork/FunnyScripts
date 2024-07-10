@@ -1,0 +1,78 @@
+# Function to calculate tax proportion based on ownership duration
+function Calculate-Tax {
+    param (
+        [double]$totalTax,
+        [datetime]$startDate,
+        [datetime]$endDate,
+        [datetime]$ownershipStartDate,
+        [datetime]$ownershipEndDate
+    )
+
+    $ownershipDuration = ($ownershipEndDate - $ownershipStartDate).Days + 1
+    $totalDuration = ($endDate - $startDate).Days + 1
+
+    return [math]::Round(($totalTax * $ownershipDuration / $totalDuration), 2)
+}
+
+# Function to convert date string to datetime
+function Convert-Date {
+    param (
+        [string]$dateString
+    )
+
+    return [datetime]::ParseExact($dateString, 'dd-MM-yyyy', $null)
+}
+
+# House tax data
+$houseData = @(
+    @{
+        'House' = 'House1';
+        'TotalTax' = 3000;
+        'Owners' = @(
+            @{ 'Owner' = 'Owner1'; 'OwnershipStartDate' = Convert-Date '01-01-2021'; 'OwnershipEndDate' = Convert-Date '31-12-2023' }
+        )
+    },
+    @{
+        'House' = 'House2';
+        'TotalTax' = 10000;
+        'Owners' = @(
+            @{ 'Owner' = 'Owner1'; 'OwnershipStartDate' = Convert-Date '01-01-2021'; 'OwnershipEndDate' = Convert-Date '30-09-2022' },
+            @{ 'Owner' = 'Owner2'; 'OwnershipStartDate' = Convert-Date '01-10-2022'; 'OwnershipEndDate' = Convert-Date '31-12-2023' }
+        )
+    },
+    @{
+        'House' = 'House3';
+        'TotalTax' = -5000;
+        'Owners' = @(
+            @{ 'Owner' = 'Owner1'; 'OwnershipStartDate' = Convert-Date '01-01-2021'; 'OwnershipEndDate' = Convert-Date '30-11-2021' },
+            @{ 'Owner' = 'Owner2'; 'OwnershipStartDate' = Convert-Date '01-12-2021'; 'OwnershipEndDate' = Convert-Date '31-12-2023' }
+        )
+    }
+)
+
+# Define the tax period
+$taxStartDate = Convert-Date '01-01-2021'
+$taxEndDate = Convert-Date '31-12-2023'
+
+# Calculate and output the tax for each owner
+foreach ($house in $houseData) {
+    $totalTax = $house.TotalTax
+    Write-Output "Tax distribution for $($house.House) :"
+    Write-Output "Total Tax: $($house.TotalTax)"
+    Write-Output "------------------------------------"
+
+    foreach ($owner in $house.Owners) {
+        $ownerName = $owner.Owner
+        $ownershipStartDate = $owner.OwnershipStartDate
+        $ownershipEndDate = $owner.OwnershipEndDate
+
+        $ownerTax = $null
+        $ownerTax = Calculate-Tax $totalTax $taxStartDate $taxEndDate $ownershipStartDate $ownershipEndDate
+
+        Write-Output "Owner: $ownerName"
+        Write-Output "Ownership Period: $($ownershipStartDate.ToString('dd-MM-yyyy')) to $($ownershipEndDate.ToString('dd-MM-yyyy'))"
+        Write-Output "Owner's Tax Share: $ownerTax"
+        Write-Output "------------------------------------"
+    }
+    Write-Output ""
+}
